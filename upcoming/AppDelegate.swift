@@ -60,7 +60,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 if granted {
                     self.updateMenuBar()
                 } else {
-                    self.statusBarItem.button?.title = "No Calendar Access"
+                    self.statusBarItem?.button?.title = "No Calendar Access"
                 }
             }
         }
@@ -82,6 +82,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let timeLeft = timeUntilEvent(nextEvent)
         let title = "\(nextEvent.title) in \(timeLeft)"
         statusBarItem?.button?.title = title
+    }
+    
+    func fetchNextEvent() -> EKEvent? {
+        let calendars = eventStore.calendars(for: .event)
+        let now = Date()
+        let endDate = Calendar.current.date(byAdding: .day, value: 1, to: now)!
+        let predicate = eventStore.predicateForEvents(withStart: now, end: endDate, calendars: calendars)
+        let events = eventStore.events(matching: predicate)
+            .filter{ !$0.isAllDay }
+            .sorted{ $0.startDate < $1.startDate }
+        return events.first
+        
     }
 
     @objc func statusBarButtonClicked(_ sender : NSStatusBarButton) {
