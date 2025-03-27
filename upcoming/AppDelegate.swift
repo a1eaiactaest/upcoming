@@ -78,12 +78,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             updateMenuItems(with: nil)
             return
         }
-        
+
         let timeLeft = timeUntilEvent(nextEvent)
         let title = "\(nextEvent.title) in \(timeLeft)"
         statusBarItem?.button?.title = title
     }
-    
+
     func fetchNextEvent() -> EKEvent? {
         let calendars = eventStore.calendars(for: .event)
         let now = Date()
@@ -93,7 +93,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .filter{ !$0.isAllDay }
             .sorted{ $0.startDate < $1.startDate }
         return events.first
-        
+    }
+
+    func timeUntilEvent(_ event: EKEvent) -> String {
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.hour, .minute]
+        formatter.unitsStyle = .abbreviated
+        return formatter.string(from: Date(), to: event.startDate) ?? ""
     }
 
     @objc func statusBarButtonClicked(_ sender : NSStatusBarButton) {
