@@ -65,17 +65,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
-    
+
     func startTimer() {
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
             self.updateMenuBar()
         }
     }
-    
-    
-    
-    
-    
+
+    func updateMenuBar() {
+        guard let nextEvent = fetchNextEvent() else {
+            statusBarItem?.button?.title = "No upcoming events"
+            updateMenuItems(with: nil)
+            return
+        }
+        
+        let timeLeft = timeUntilEvent(nextEvent)
+        let title = "\(nextEvent.title) in \(timeLeft)"
+        statusBarItem?.button?.title = title
+    }
+
     @objc func statusBarButtonClicked(_ sender : NSStatusBarButton) {
         print("menu bar item clicked edit")
         // TODO: handling logic here
