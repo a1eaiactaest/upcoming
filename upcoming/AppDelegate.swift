@@ -54,9 +54,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     }
     
-    func requestCalendarAccess(){}
+    func requestCalendarAccess() {
+        eventStore.requestAccess(to: .event) { granted, error in
+            DispatchQueue.main.async {
+                if granted {
+                    self.updateMenuBar()
+                } else {
+                    self.statusBarItem.button?.title = "No Calendar Access"
+                }
+            }
+        }
+    }
     
-    func startTimer(){}
+    func startTimer() {
+        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+            self.updateMenuBar()
+        }
+    }
+    
+    
+    
+    
     
     @objc func statusBarButtonClicked(_ sender : NSStatusBarButton) {
         print("menu bar item clicked edit")
