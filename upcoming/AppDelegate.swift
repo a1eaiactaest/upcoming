@@ -11,7 +11,7 @@ import AppKit
 import EventKit
 
 class AppDelegate: NSObject, NSApplicationDelegate {
-    var statusBarItem: NSStatusItem?
+    var statusBarItem: NSStatusItem!
     var eventStore = EKEventStore()
     var timer: Timer?
     
@@ -100,6 +100,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         formatter.allowedUnits = [.hour, .minute]
         formatter.unitsStyle = .abbreviated
         return formatter.string(from: Date(), to: event.startDate) ?? ""
+    }
+
+    func updateMenuItems(with event: EKEvent?) {
+        guard let menu = statusBarItem.menu else { return }
+        
+        // Clear existing dynamic items (keep the last 3 static items)
+        while menu.items.count > 3 {
+            menu.removeItem(at: 0)
+        }
+        
+        if let event = event {
+            let bezierIcon = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+            let color = event.calendar.color
+            let image = NSImage(size: NSSize(width: 16, height: 16), flipped: false) { rect in
+                let path = NSBezierPath()
+                path.move(to: NSPoint(x: rect.minX, y: rect.minY))
+                path.line(to: NSPoint(x: rect.maxX, y: rect.maxY))
+                path.lineWidth = 2
+                color?.setStroke() // apparently optional
+                path.stroke()
+                return true
+            }
+
+            bezierIcon.image = image
+            menu.insertItem(bezierIcon, at: 0)
+            
+            let titleItem = NSMenuItem(title: event.title, action: nil, keyEquivalent: "")
+        }
     }
 
     @objc func statusBarButtonClicked(_ sender : NSStatusBarButton) {
