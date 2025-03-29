@@ -152,7 +152,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 action: #selector(skipEvent), // TODO: implem
                 keyEquivalent: ""
             )
-            skipItem.represnetedObject = event
+            skipItem.representedObject = event
             menu.insertItem(locationItem, at: 4)
             
             let noEventsItem = NSMenuItem( // TODO: think of something creative
