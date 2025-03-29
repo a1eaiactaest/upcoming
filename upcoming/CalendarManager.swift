@@ -13,13 +13,13 @@ class CalendarManager: ObservableObject {
     @Published var calendars: [EKCalendar] = []
     private let eventStore = EKEventStore()
     
-    func loadCalendars() {
-        eventStore.requestFullAccessToEvents { granted, error in
-            if granted {
-                DispatchQueue.main.async {
-                    self.calendars = self.eventStore.calendars(for: .event)
-                        .sorted { $0.title < $1.title }
-                }
+    func loadCalendars() async throws {
+        let granted = try await eventStore.requestFullAccessToEvents()
+        if granted {
+            let calendars = eventStore.calendars(for: .event)
+                .sorted { $0.title < $1.title }
+            DispatchQueue.main.async {
+                self.calendars = calendars
             }
         }
     }

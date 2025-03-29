@@ -16,6 +16,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var eventStore = EKEventStore()
     var timer: Timer?
     var preferences = Preferences()
+    var calendarManager = CalendarManager()
     
     // swiftlint: disable line_length
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -57,15 +58,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func requestCalendarAccess() {
-        eventStore.requestAccess(to: .event) { granted, error in
-            DispatchQueue.main.async {
-                if granted {
-                    self.updateMenuBar()
-                } else {
-                    self.statusBarItem?.button?.title = "No Calendar Access"
-                }
-            }
-        }
+        eventsStore.requestAccess
     }
 
     func startTimer() {
@@ -87,14 +80,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func fetchNextEvent() -> EKEvent? {
-        let calendars = eventStore.calendars(for: .event)
+        let calendars: [EKCalendar]
+        if !preferences.selectedCalendarIds.isEmpty {
+            calendars = eventStore.calendars(for: .event)
+                .filter {
+                    preferences.selectedCalendarIds.contains($0.calendarIdentifier)
+                }
+        } else {
+            calendars = eventStore.calendars(for: .event)
+        }
+        
         let now = Date()
         let endDate = Calendar.current.date(byAdding: .day, value: 1, to: now)!
-        let predicate = eventStore.predicateForEvents(withStart: now, end: endDate, calendars: calendars)
+        let predicate = eventStore.predicateForEvents(
+            withStart: now,
+            end: endDate,
+            calendars: calendars
+        )
         let events = eventStore.events(matching: predicate)
-            .filter{ !$0.isAllDay }
-            .sorted{ $0.startDate < $1.startDate }
+            .filter { !$0.isAllDay }
+            .sorted { $0.startDate < $1.startDate }
         return events.first
+        
     }
 
     func timeUntilEvent(_ event: EKEvent) -> String {
