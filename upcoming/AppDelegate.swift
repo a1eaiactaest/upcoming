@@ -164,6 +164,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             menu.insertItem(NSMenuItem.separator(), at: 1)
         }
     }
+    
+    @objc func skipEvent(_ sender: NSMenuItem) {
+        guard let event = sender.representedObject as? EKEvent else { return }
+        // no ingeration into the calendar
+        updateMenuBar()
+    }
+    
+    @objc func openPreferences() {
+        NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+    }
 
     @objc func statusBarButtonClicked(_ sender : NSStatusBarButton) {
         print("menu bar item clicked edit")
