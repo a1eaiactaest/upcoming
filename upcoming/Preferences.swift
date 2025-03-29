@@ -23,6 +23,16 @@ class Preferences: ObservableObject {
     
 }
 
+extension Preferences {
+    func reset() {
+        timeFormat = .relative
+        selectedCalendarIds = []
+        showLocation = true
+        refreshInterval = 1
+        skipConfirmationDisabled = false
+    }
+}
+
 @propertyWrapper
 struct StringArrayStorage: RawRepresentable {
     var rawValue: String
