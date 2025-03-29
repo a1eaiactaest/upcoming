@@ -168,29 +168,42 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func skipEvent(_ sender: NSMenuItem) {
         guard let event = sender.representedObject as? EKEvent else { return }
         
+        if preferences.skipConfirmationDisabled {
+            performEventDeletion(event)
+            return
+        }
+        
         let alert = NSAlert()
         alert.messageText = "Are you sure you want to remove this event?"
         alert.informativeText = "This action cannot be undone. Event will be permanently removed from your calendar."
         alert.addButton(withTitle: "Delete")
         alert.addButton(withTitle: "Cancel")
         alert.alertStyle = .informational
+        alert.showsSuppressionButton = true
+        alert.suppressionButton?.title = "Dont't ask me again"
         
         let response = alert.runModal()
         
+        if alert.suppressionButton?.state == .on {
+            preferences.skipConfirmationDisabled = true
+        }
         if response == .alertFirstButtonReturn {
-            do {
-                try eventStore.remove(event, span: .thisEvent)
-                updateMenuBar()
-            } catch let error as NSError {
-                print("error skipping event: \(error.localizedDescription)")
-                showErrorAlert(
-                    title: "Error Skipping Event",
-                    message: error.localizedDescription
-                )
-            }
+            performEventDeletion(event)
         }
     }
     
+    private func performEventDeletion(_ event: EKEvent) {
+        do {
+            try eventStore.remove(event, span: .thisEvent)
+            updateMenuBar()
+        } catch {
+            showErrorAlert(
+                title: "Failed to Remove Event",
+                message: "Could not remove event \(error.localizedDescription)"
+            )
+        }
+    }
+
     @objc func openPreferences() {
         NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
     }

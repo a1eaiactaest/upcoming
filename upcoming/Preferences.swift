@@ -19,6 +19,7 @@ class Preferences: ObservableObject {
     
     @AppStorage("showLocation") var showLocation = true
     @AppStorage("refreshInterval") var refreshInterval = 1 // in minutes
+    @AppStorage("skipConfirmationDisabled") var skipConfirmationDisabled = false
     
     enum TimeFormat: String, CaseIterable, Identifiable {
         case relative = "Relative (e.g., 'in 15 min')"
