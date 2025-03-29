@@ -43,7 +43,7 @@ class CalendarManager: ObservableObject {
     private func handleCalendarChanges() {
         Task {
             try await self.loadCalendars()
-            NotificationCenter.default.post(name: .calendarDataDidChange, object: nil)
+            //NotificationCenter.default.post(name: .calendarDataDidChange, object: nil)
         }
     }
     

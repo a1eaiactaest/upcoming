@@ -10,20 +10,44 @@ import Foundation
 import AppKit
 import EventKit
 import SwiftUI
+import Combine
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    var calendarManager = CalendarManager()
+    private var cancellables = Set<AnyCancellable>()
+    
     var statusBarItem: NSStatusItem!
     var eventStore = EKEventStore()
     var timer: Timer?
     var preferences = Preferences()
-    var calendarManager = CalendarManager()
     
     // swiftlint: disable line_length
     func applicationDidFinishLaunching(_ notification: Notification) {
         // main loop i guess
+        setupCalendarObservation()
         setupMenuBar()
-        requestCalendarAccess()
-        startTimer()
+        Task {
+            await requestCalendarAccess()
+            startTimer()
+        }
+    }
+    
+    private func setupCalendarObservation() {
+        calendarManager.$calendars
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateMenuBar()
+            }
+            .store(in: &cancellables)
+        /*
+        NotificationCenter.default.publisher(for: .calendarDataDidChange)
+                    .receive(on: DispatchQueue.main)
+                    .sink { [weak self] _ in
+                        self?.updateMenuBar()
+                    }
+                    .store(in: &cancellables)
+         */
+
     }
     
     func setupMenuBar() {
@@ -57,8 +81,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     }
     
-    func requestCalendarAccess() {
-        eventsStore.requestAccess
+    func requestCalendarAccess() async {
+        do {
+            try await calendarManager.loadCalendars()
+            await MainActor.run {
+                updateMenuBar()
+            }
+        } catch {
+            await MainActor.run {
+                statusBarItem?.button?.title = "Calendar Access Error"
+                NSLog("calendar access failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     func startTimer() {
@@ -80,6 +114,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func fetchNextEvent() -> EKEvent? {
+        /*
         let calendars: [EKCalendar]
         if !preferences.selectedCalendarIds.isEmpty {
             calendars = eventStore.calendars(for: .event)
@@ -101,6 +136,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .filter { !$0.isAllDay }
             .sorted { $0.startDate < $1.startDate }
         return events.first
+        */
+        let calendars = calendarManager.filteredCalendars(selectedIDs: preferences.selectedCalendarIds)
+        let now = Date()
+        let endDate = Calendar.current.date(byAdding: .day, value: 1, to: now)!
+        
+        let predicate = calendarManager.eventStore.predicateForEvents(
+            withStart: now,
+            end: endDate,
+            calendars: calendars
+        )
+        
+        return calendarManager.eventStore.events(matching: predicate)
+            .filter { !$0.isAllDay }
+            .sorted { $0.startDate < $1.startDate }
+            .first
+
         
     }
 
@@ -215,7 +266,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func openPreferences() {
         //NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-        let preferencesView = PreferencesView().environmentObject(preferences)
+        let preferencesView = PreferencesView()
+            .environmentObject(preferences)
+            .environmentObject(calendarManager)
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
             styleMask: [.titled, .closable],
