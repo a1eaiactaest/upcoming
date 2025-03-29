@@ -168,15 +168,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func skipEvent(_ sender: NSMenuItem) {
         guard let event = sender.representedObject as? EKEvent else { return }
         
-        do {
-            try eventStore.remove(event, span: .thisEvent)
-            updateMenuBar()
-        } catch let error as NSError {
-            print("error skipping event: \(error.localizedDescription)")
-            showErrorAlert(
-                title: "Error Skipping Event",
-                message: error.localizedDescription
-            )
+        let alert = NSAlert()
+        alert.messageText = "Are you sure you want to remove this event?"
+        alert.informativeText = "This action cannot be undone. Event will be permanently removed from your calendar."
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+        alert.alertStyle = .informational
+        
+        let response = alert.runModal()
+        
+        if response == .alertFirstButtonReturn {
+            do {
+                try eventStore.remove(event, span: .thisEvent)
+                updateMenuBar()
+            } catch let error as NSError {
+                print("error skipping event: \(error.localizedDescription)")
+                showErrorAlert(
+                    title: "Error Skipping Event",
+                    message: error.localizedDescription
+                )
+            }
         }
     }
     

@@ -13,5 +13,6 @@ func showErrorAlert(title: String, message: String) {
     alert.messageText = title
     alert.informativeText = message
     alert.addButton(withTitle: "OK")
+    alert.alertStyle = .critical
     alert.runModal()
 }
