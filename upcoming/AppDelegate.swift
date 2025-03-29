@@ -167,8 +167,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc func skipEvent(_ sender: NSMenuItem) {
         guard let event = sender.representedObject as? EKEvent else { return }
-        // no ingeration into the calendar
-        updateMenuBar()
+        
+        do {
+            try eventStore.remove(event, span: .thisEvent)
+            updateMenuBar()
+        } catch let error as NSError {
+            print("error skipping event: \(error.localizedDescription)")
+            showErrorAlert(
+                title: "Error Skipping Event",
+                message: error.localizedDescription
+            )
+        }
     }
     
     @objc func openPreferences() {
