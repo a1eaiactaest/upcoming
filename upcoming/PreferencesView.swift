@@ -17,9 +17,13 @@ struct PreferencesView: View {
             Stepper("Refresh interval (minutes): \(preferences.refreshInterval)", value: $preferences.refreshInterval, in: 1...60)
             Toggle(
                 "Show confirmation before deleting events",
-                isOn: $preferences.skipConfirmationDisabled.map(
-                    get: { !$0 },
-                    set: { !$0 }
+                isOn: Binding(
+                    get: {
+                        !preferences.skipConfirmationDisabled
+                    },
+                    set: {
+                        preferences.skipConfirmationDisabled = !$0
+                    }
                 )
             )
         }
