@@ -9,11 +9,13 @@
 import Foundation
 import AppKit
 import EventKit
+import SwiftUI
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusBarItem: NSStatusItem!
     var eventStore = EKEventStore()
     var timer: Timer?
+    var preferences = Preferences()
     
     // swiftlint: disable line_length
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -205,7 +207,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func openPreferences() {
-        NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        //NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        let preferencesView = PreferencesView().environmentObject(preferences)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = NSHostingView(rootView: preferencesView)
+        window.makeKeyAndOrderFront(nil)
     }
 
     @objc func statusBarButtonClicked(_ sender : NSStatusBarButton) {
