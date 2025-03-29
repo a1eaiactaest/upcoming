@@ -21,14 +21,6 @@ class Preferences: ObservableObject {
     @AppStorage("refreshInterval") var refreshInterval = 1 // in minutes
     @AppStorage("skipConfirmationDisabled") var skipConfirmationDisabled = false
     
-    enum TimeFormat: String, CaseIterable, Identifiable {
-        case relative = "Relative (e.g., 'in 15 min')"
-        case clock = "Clock time (e.g., 'at 2:30PM')"
-        case hybrid = "Relative and clock time (e.g., 'in 15 min (2:30PM)')"
-        case hybridReverse = "Clock time and relative (e.g., 'at 2:30PM (in 15 min)')"
-        
-        var id: String { self.rawValue }
-    }
 }
 
 @propertyWrapper
