@@ -126,7 +126,42 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             bezierIcon.image = image
             menu.insertItem(bezierIcon, at: 0)
             
-            let titleItem = NSMenuItem(title: event.title, action: nil, keyEquivalent: "")
+            let titleItem = NSMenuItem(
+                title: event.title,
+                action: nil,
+                keyEquivalent: ""
+            )
+            menu.insertItem(titleItem, at: 1)
+            
+            let timeItem = NSMenuItem(
+                title: "\(event.startDate.formatted()) - \(event.endDate.formatted())",
+                action: nil,
+                keyEquivalent: ""
+            )
+            menu.insertItem(timeItem, at: 2)
+            
+            let locationItem = NSMenuItem(
+                title: event.location ?? "No location",
+                action: nil,
+                keyEquivalent: ""
+            )
+            menu.insertItem(locationItem, at: 3)
+            
+            let skipItem = NSMenuItem(
+                title: "Skip >>",
+                action: #selector(skipEvent), // TODO: implem
+                keyEquivalent: ""
+            )
+            skipItem.represnetedObject = event
+            menu.insertItem(locationItem, at: 4)
+            
+            let noEventsItem = NSMenuItem( // TODO: think of something creative
+                title: "no upcoming events",
+                action: nil,
+                keyEquivalent: ""
+            )
+            menu.insertItem(noEventsItem, at: 0)
+            menu.insertItem(NSMenuItem.separator(), at: 1)
         }
     }
 
