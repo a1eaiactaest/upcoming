@@ -217,6 +217,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
         window.contentView = NSHostingView(rootView: preferencesView)
         window.makeKeyAndOrderFront(nil)
+        
     }
 
     @objc func statusBarButtonClicked(_ sender : NSStatusBarButton) {
