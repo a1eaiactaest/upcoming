@@ -9,5 +9,7 @@ import EventKit
 
 extension Notification.Name {
     static let calendarDataDidChange = Notification.Name("calendarDataDidChange")
+    static let calendarSyncError = Notification.Name("calendarSyncError")
 }
+
 

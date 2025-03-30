@@ -10,7 +10,7 @@ import Dispatch
 import EventKit
 import Combine
 
-class CalendarManager: ObservableObject {
+class CalendarManager: NSObject, ObservableObject {
     @Published var calendars: [EKCalendar] = []
     let eventStore = EKEventStore()
     
@@ -40,10 +40,46 @@ class CalendarManager: ObservableObject {
         }
     }
     
-    private func handleCalendarChanges() {
+    @objc private func handleCalendarChanges() {
+        /*
         Task {
             try await self.loadCalendars()
             //NotificationCenter.default.post(name: .calendarDataDidChange, object: nil)
+        }
+         */
+        NSObject.cancelPreviousPerformRequests(
+            withTarget: self,
+            selector: #selector(performCalendarReload),
+            object: nil
+        )
+        
+        perform(
+            #selector(performCalendarReload),
+            with: nil,
+            afterDelay: 0.5
+        )
+    }
+    
+    @objc private func performCalendarReload() {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.loadCalendars()
+                await MainActor.run {
+                    NotificationCenter.default.post(
+                        name: .calendarDataDidChange,
+                        object: self.calendars
+                    )
+                }
+            } catch {
+                await MainActor.run {
+                    NSLog("Calendar reload failed: \(error.localizedDescription)")
+                    NotificationCenter.default.post(
+                        name: .calendarSyncError,
+                        object: error
+                    )
+                }
+            }
         }
     }
     

@@ -33,12 +33,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func setupCalendarObservation() {
+        /*
         calendarManager.$calendars
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.updateMenuBar()
             }
             .store(in: &cancellables)
+         */
         /*
         NotificationCenter.default.publisher(for: .calendarDataDidChange)
                     .receive(on: DispatchQueue.main)
@@ -47,6 +49,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     }
                     .store(in: &cancellables)
          */
+        NotificationCenter.default.addObserver(
+                forName: .calendarDataDidChange,
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                self?.updateMenuBar()
+                if let calendars = notification.object as? [EKCalendar] {
+                    self?.handleNewCalendars(calendars)
+                }
+            }
+            
+            // For errors
+            NotificationCenter.default.addObserver(
+                forName: .calendarSyncError,
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                if let error = notification.object as? Error {
+                    self?.showCalendarError(error)
+                }
+            }
+
 
     }
     
