@@ -50,28 +50,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     .store(in: &cancellables)
          */
         NotificationCenter.default.addObserver(
-                forName: .calendarDataDidChange,
-                object: nil,
-                queue: .main
-            ) { [weak self] notification in
-                self?.updateMenuBar()
-                if let calendars = notification.object as? [EKCalendar] {
-                    self?.handleNewCalendars(calendars)
-                }
-            }
-            
-            // For errors
-            NotificationCenter.default.addObserver(
-                forName: .calendarSyncError,
-                object: nil,
-                queue: .main
-            ) { [weak self] notification in
-                if let error = notification.object as? Error {
-                    self?.showCalendarError(error)
-                }
-            }
-
-
+            forName: .calendarDataDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let calendars = notification.object as? [EKCalendar] else { return }
+            self?.handleNewCalendars(calendars)
+        }
+    }
+    
+    private func handleNewCalendars(_ calendars: [EKCalendar]) {
+        let validIds = calendars.map { $0.calendarIdentifier }
+        preferences.selectedCalendarIds = preferences.selectedCalendarIds.filter {
+            validIds.contains($0)
+        }
+        
+        updateMenuBar()
+        
+        (NSApp.windows.first { $0.title == "Preferences "})?
+            .contentView?
+            .subviews
+            .compactMap { $0 as? NSHostingView<PreferencesView> }
+            .forEach { $0.rootView.objectWillChange.send() }
     }
     
     func setupMenuBar() {
