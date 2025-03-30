@@ -10,8 +10,7 @@ import EventKit
 
 struct PreferencesView: View {
     @EnvironmentObject var preferences: Preferences
-    @StateObject private var calendarManager = CalendarManager();
-    
+    @EnvironmentObject var calendarManager: CalendarManager
     
     var body: some View {
         Form {
