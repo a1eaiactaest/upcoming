@@ -231,18 +231,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         if let event = event {
-            let bezierIcon = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-            let color = event.calendar.color
-            let image = NSImage(size: NSSize(width: 16, height: 16), flipped: false) { rect in
-                let path = NSBezierPath()
-                path.move(to: NSPoint(x: rect.minX, y: rect.minY))
-                path.line(to: NSPoint(x: rect.maxX, y: rect.maxY))
-                path.lineWidth = 2
-                color?.setStroke() // apparently optional
-                path.stroke()
-                return true
-            }
-
             bezierIcon.image = image
             menu.insertItem(bezierIcon, at: 0)
             
