@@ -237,55 +237,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Otherwise show time until event starts
         return "in " + (formatter.string(from: now, to: event.startDate) ?? "")
     }
-
-    func updateMenuItems(with event: EKEvent?) {
-        guard let menu = statusBarItem.menu else { return }
-        
-        // Clear existing dynamic items (keep the last 3 static items)
-        while menu.items.count > 3 {
-            menu.removeItem(at: 0)
-        }
-        
-        if let event = event {
-            let titleItem = NSMenuItem(
-                title: event.title,
-                action: nil,
-                keyEquivalent: ""
-            )
-            menu.insertItem(titleItem, at: 1)
-            
-            let timeItem = NSMenuItem(
-                title: "\(event.startDate.formatted()) - \(event.endDate.formatted())",
-                action: nil,
-                keyEquivalent: ""
-            )
-            menu.insertItem(timeItem, at: 2)
-            
-            let locationItem = NSMenuItem(
-                title: event.location ?? "",
-                action: nil,
-                keyEquivalent: ""
-            )
-            menu.insertItem(locationItem, at: 3)
-            
-            let skipItem = NSMenuItem(
-                title: "Skip >>",
-                action: #selector(skipEvent), // TODO: implem
-                keyEquivalent: ""
-            )
-            skipItem.representedObject = event
-            menu.insertItem(locationItem, at: 4)
-            
-            let noEventsItem = NSMenuItem( // TODO: think of something creative
-                title: "no upcoming events",
-                action: nil,
-                keyEquivalent: ""
-            )
-            menu.insertItem(noEventsItem, at: 0)
-            menu.insertItem(NSMenuItem.separator(), at: 1)
-        }
-    }
-    
+   
     @objc func skipEvent(_ sender: NSMenuItem) {
         guard let event = sender.representedObject as? EKEvent else { return }
         
