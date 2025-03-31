@@ -167,7 +167,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         let timeLeft = timeUntilEvent(nextEvent)
-        let title = "\(nextEvent.title) \(timeLeft)"
+        let title = "\(nextEvent.title!) \(timeLeft)"
         
         if let button = statusBarItem?.button {
             button.image = image
