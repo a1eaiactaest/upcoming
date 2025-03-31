@@ -213,7 +213,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // If event is ongoing, show time until it ends
         if event.startDate <= now && event.endDate > now {
-            return (formatter.string(from: now, to: event.endDate) ?? "" + "left")
+            return ((formatter.string(from: now, to: event.endDate) ?? "") + "left")
         }
         
         // Otherwise show time until event starts
