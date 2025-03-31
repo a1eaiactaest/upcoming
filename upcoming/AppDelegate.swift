@@ -155,16 +155,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        // Create color indicator image
+        let imageWidth = 3
+        let imageHeight = 16
+
         let color = nextEvent.calendar.color
-        let image = NSImage(size: NSSize(width: 12, height: 12), flipped: false) { rect in
-            let path = NSBezierPath()
-            let midX = rect.midX
-            path.move(to: NSPoint(x: midX, y: rect.minY))
-            path.line(to: NSPoint(x: midX, y: rect.maxY))
-            path.lineWidth = 4
-            color?.setStroke()
-            path.stroke()
+        let image = NSImage(size: NSSize(width: imageWidth, height: imageHeight), flipped: false) { rect in
+            let path = NSBezierPath(roundedRect: rect, xRadius: 1, yRadius: 1)
+            color?.setFill()
+            path.fill()
             return true
         }
         
@@ -173,7 +171,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         if let button = statusBarItem?.button {
             button.image = image
-            button.image?.size = NSSize(width: 12, height: 12)
+            button.image?.size = NSSize(width: imageWidth, height: imageHeight)
             button.imagePosition = .imageLeft
             button.title = title
         }
