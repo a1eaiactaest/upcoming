@@ -244,7 +244,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             menu.insertItem(timeItem, at: 2)
             
             let locationItem = NSMenuItem(
-                title: event.location ?? "No location",
+                title: event.location ?? "",
                 action: nil,
                 keyEquivalent: ""
             )
