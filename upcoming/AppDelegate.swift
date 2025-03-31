@@ -111,7 +111,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
         
-        // Setup popovers
+        
+        let settingsMenu = NSMenu()
+        settingsMenu.addItem(withTitle: "Preferences...", action: #selector(openPreferences), keyEquivalent: ",")
+        settingsMenu.addItem(NSMenuItem.separator())
+        settingsMenu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        statusBarItem.settingsMenu = settingsMenu
+        
+        
+        
         mainPopover = NSPopover()
         mainPopover?.behavior = .transient
         mainPopover?.contentSize = NSSize(width: 300, height: 400)
@@ -119,14 +127,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             rootView: EventMenuView()
                 .environmentObject(preferences)
                 .environmentObject(calendarManager)
-        )
-        
-        settingsPopover = NSPopover()
-        settingsPopover?.behavior = .transient
-        settingsPopover?.contentSize = NSSize(width: 200, height: 100)
-        settingsPopover?.contentViewController = NSHostingController(
-            rootView: SettingsMenuView()
-                .environmentObject(preferences)
         )
     }
     
@@ -319,17 +319,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                           (event.type == .leftMouseUp && event.modifierFlags.contains(.control))
         
         if isRightClick {
+            /*
             if settingsPopover?.isShown == true {
                 settingsPopover?.close()
             } else {
                 mainPopover?.close()
                 settingsPopover?.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
             }
+             */
+            if let settingsMenu = statusBarItem.settingsMenu {
+                statusBarItem.menu = settingsMenu
+                statusBarItem.button?.performClick(nil)
+                statusBarItem.menu = nil
+            }
         } else {
             if mainPopover?.isShown == true {
                 mainPopover?.close()
             } else {
-                settingsPopover?.close()
+                //settingsPopover?.close()
                 updateEventMenu()
                 mainPopover?.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
             }
@@ -418,24 +425,6 @@ struct EventMenuView: View {
             } else {
                 Text("No upcoming events")
                     .font(.headline)
-            }
-        }
-        .padding()
-    }
-}
-
-struct SettingsMenuView: View {
-    @EnvironmentObject var preferences: Preferences
-    @Environment(\.openWindow) var openWindow
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            Button("Preferences...") {
-                NSApp.sendAction(#selector(AppDelegate.openPreferences), to: nil, from: nil)
-            }
-            Divider()
-            Button("Quit") {
-                NSApplication.shared.terminate(nil)
             }
         }
         .padding()
