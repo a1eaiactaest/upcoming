@@ -87,12 +87,20 @@ class CalendarManager: NSObject, ObservableObject {
     
     func loadCalendars() async throws {
         let granted = try await eventStore.requestFullAccessToEvents()
-        if granted {
-            let calendars = eventStore.calendars(for: .event)
-                .sorted { $0.title < $1.title }
-            await MainActor.run {
-                self.calendars = calendars
-            }
+        guard granted else {
+            throw CalendarError.accessDenied
+        }
+        
+        let calendars = eventStore.calendars(for: .event)
+            .sorted { $0.title < $1.title }
+        
+        await MainActor.run {
+            self.calendars = calendars
+            // Notify about the change
+            NotificationCenter.default.post(
+                name: .calendarDataDidChange,
+                object: self.calendars
+            )
         }
     }
     
