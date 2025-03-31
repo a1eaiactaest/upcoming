@@ -361,13 +361,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func statusBarButtonClicked(_ sender: NSStatusBarButton) {
         guard let event = NSApp.currentEvent else { return }
         
-        if event.type == .rightMouseUp || event.modifierFlags.contains(.control) {
-            statusBarItem.menu = statusBarItem.settingsMenu
-            statusBarItem.menu?.popUp(positioning: nil, at: NSPoint(x: 0, y: 0), in: sender)
+        let isRightClick = event.type == .rightMouseUp || 
+                           (event.type == .leftMouseUp && event.modifierFlags.contains(.control))
+        
+        // Calculate position for menu to appear below the status item
+        let menuPosition = NSPoint(
+            x: 0,
+            y: -NSStatusBar.system.thickness
+        )
+        
+        if isRightClick {
+            statusBarItem.settingsMenu?.popUp(positioning: statusBarItem.settingsMenu?.items.first, 
+                                            at: menuPosition, 
+                                            in: sender)
         } else {
-            statusBarItem.menu = statusBarItem.mainMenu
             updateEventMenu()
-            statusBarItem.menu?.popUp(positioning: nil, at: NSPoint(x: 0, y: 0), in: sender)
+            statusBarItem.mainMenu?.popUp(positioning: statusBarItem.mainMenu?.items.first, 
+                                        at: menuPosition, 
+                                        in: sender)
         }
     }
 
