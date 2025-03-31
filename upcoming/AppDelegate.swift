@@ -37,6 +37,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var timer: Timer?
     var preferences = Preferences()
     
+    // Add these properties
+    private var mainPopover: NSPopover?
+    private var settingsPopover: NSPopover?
+    
     // swiftlint: disable line_length
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupCalendarObservation()
@@ -107,25 +111,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
         
-        // Create two separate menus
-        let mainMenu = NSMenu()
-        let settingsMenu = NSMenu()
-        
-        // Setup settings menu
-        settingsMenu.addItem(NSMenuItem(
-            title: "Preferences",
-            action: #selector(openPreferences),
-            keyEquivalent: ",")
+        // Setup popovers
+        mainPopover = NSPopover()
+        mainPopover?.behavior = .transient
+        mainPopover?.contentSize = NSSize(width: 300, height: 400)
+        mainPopover?.contentViewController = NSHostingController(
+            rootView: EventMenuView()
+                .environmentObject(preferences)
+                .environmentObject(calendarManager)
         )
-        settingsMenu.addItem(NSMenuItem.separator())
-        settingsMenu.addItem(NSMenuItem(
-            title: "Quit",
-            action: #selector(NSApplication.terminate(_:)),
-            keyEquivalent: "q"
-        ))
         
-        statusBarItem.mainMenu = mainMenu
-        statusBarItem.settingsMenu = settingsMenu
+        settingsPopover = NSPopover()
+        settingsPopover?.behavior = .transient
+        settingsPopover?.contentSize = NSSize(width: 200, height: 100)
+        settingsPopover?.contentViewController = NSHostingController(
+            rootView: SettingsMenuView()
+                .environmentObject(preferences)
+        )
     }
     
     private func requestCalendarAccess() async throws -> Bool {
@@ -311,7 +313,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    private func performEventDeletion(_ event: EKEvent) {
+    func performEventDeletion(_ event: EKEvent) {
         do {
             try eventStore.remove(event, span: .thisEvent)
             updateMenuBar()
@@ -362,23 +364,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard let event = NSApp.currentEvent else { return }
         
         let isRightClick = event.type == .rightMouseUp || 
-                           (event.type == .leftMouseUp && event.modifierFlags.contains(.control))
-        
-        // Calculate position for menu to appear below the status item
-        let menuPosition = NSPoint(
-            x: 0,
-            y: -NSStatusBar.system.thickness
-        )
+                          (event.type == .leftMouseUp && event.modifierFlags.contains(.control))
         
         if isRightClick {
-            statusBarItem.settingsMenu?.popUp(positioning: statusBarItem.settingsMenu?.items.first, 
-                                            at: menuPosition, 
-                                            in: sender)
+            if settingsPopover?.isShown == true {
+                settingsPopover?.close()
+            } else {
+                mainPopover?.close()
+                settingsPopover?.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
+            }
         } else {
-            updateEventMenu()
-            statusBarItem.mainMenu?.popUp(positioning: statusBarItem.mainMenu?.items.first, 
-                                        at: menuPosition, 
-                                        in: sender)
+            if mainPopover?.isShown == true {
+                mainPopover?.close()
+            } else {
+                settingsPopover?.close()
+                updateEventMenu()
+                mainPopover?.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
+            }
         }
     }
 
@@ -431,5 +433,59 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupMyApp() {
         // TODO: Add any intialization steps here.
         print("Application started up!")
+    }
+}
+
+// Create new SwiftUI views for the popovers
+struct EventMenuView: View {
+    @EnvironmentObject var preferences: Preferences
+    @EnvironmentObject var calendarManager: CalendarManager
+    
+    var appDelegate: AppDelegate? {
+        NSApp.delegate as? AppDelegate
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let event = appDelegate?.fetchNextEvent() {
+                Text(event.title ?? "Untitled Event")
+                    .font(.headline)
+                Text("\(event.startDate.formatted()) - \(event.endDate.formatted())")
+                    .font(.subheadline)
+                if let location = event.location {
+                    Text(location)
+                        .font(.subheadline)
+                }
+                Divider()
+                Button("Skip >>") {
+                    if let delegate = appDelegate {
+                        //delegate.skipEvent(NSMenuItem(representedObject: event))
+                        delegate.performEventDeletion(event)
+                    }
+                }
+            } else {
+                Text("No upcoming events")
+                    .font(.headline)
+            }
+        }
+        .padding()
+    }
+}
+
+struct SettingsMenuView: View {
+    @EnvironmentObject var preferences: Preferences
+    @Environment(\.openWindow) var openWindow
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            Button("Preferences...") {
+                NSApp.sendAction(#selector(AppDelegate.openPreferences), to: nil, from: nil)
+            }
+            Divider()
+            Button("Quit") {
+                NSApplication.shared.terminate(nil)
+            }
+        }
+        .padding()
     }
 }
