@@ -110,17 +110,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     }
     
-    func requestCalendarAccess() async {
+    private func requestCalendarAccess() async -> Bool {
         do {
-            try await calendarManager.loadCalendars()
-            await MainActor.run {
-                updateMenuBar()
-            }
+            return try await eventStore.requestFullAccessToEvents()
         } catch {
-            await MainActor.run {
-                statusBarItem?.button?.title = "Calendar Access Error"
-                NSLog("calendar access failed: \(error.localizedDescription)")
-            }
+            showErrorAlert(
+                title: "Calendar Access Error",
+                message: "Could not access your calendars. Please check your privacy settings."
+            )
+            return false
         }
     }
 
@@ -315,13 +313,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             window.makeKeyAndOrderFront(nil)
             
             // Close window when preferences close
-            /*
             NotificationCenter.default.addObserver(
-                    forName: NSWindow.willCloseNotification,
-                    object: window,
-                    queue: nil
-                )
-             */
+                forName: NSWindow.willCloseNotification,
+                object: window,
+                queue: nil
+            ) { _ in
+                // Clean up any resources if needed
+            }
         
     }
 
