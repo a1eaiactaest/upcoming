@@ -231,9 +231,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         if let event = event {
-            bezierIcon.image = image
-            menu.insertItem(bezierIcon, at: 0)
-            
             let titleItem = NSMenuItem(
                 title: event.title,
                 action: nil,
