@@ -67,11 +67,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         updateMenuBar()
         
-        (NSApp.windows.first { $0.title == "Preferences "})?
-            .contentView?
-            .subviews
-            .compactMap { $0 as? NSHostingView<PreferencesView> }
-            .forEach { $0.rootView.objectWillChange.send() }
+        if let preferencesWindow = NSApp.windows.first(where: { $0.title == "Preferences"}) {
+            preferencesWindow.contentView?.needsDisplay = true
+            if let hostingView = preferencesWindow.contentView as? NSHostingView<PreferencesView> {
+                hostingView.rootView = PreferencesView()
+                    .environmentObject(calendarManager)
+                    .environmentObject(preferences) as! PreferencesView
+            }
+                
+        }
     }
     
     func setupMenuBar() {
@@ -289,18 +293,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func openPreferences() {
-        //NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
-        let preferencesView = PreferencesView()
-            .environmentObject(preferences)
-            .environmentObject(calendarManager)
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
-            styleMask: [.titled, .closable],
-            backing: .buffered,
-            defer: false
-        )
-        window.contentView = NSHostingView(rootView: preferencesView)
-        window.makeKeyAndOrderFront(nil)
+        if let existingWindow = NSApp.windows.first(where: { $0.title == "Preferences" }) {
+                existingWindow.makeKeyAndOrderFront(nil)
+                return
+            }
+            
+            let view = PreferencesView()
+                .environmentObject(preferences)
+                .environmentObject(calendarManager)
+            
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 450, height: 300),
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "Preferences"
+            window.contentView = NSHostingView(rootView: view)
+            window.center()
+            window.makeKeyAndOrderFront(nil)
+            
+            // Close window when preferences close
+            /*
+            NotificationCenter.default.addObserver(
+                    forName: NSWindow.willCloseNotification,
+                    object: window,
+                    queue: nil
+                )
+             */
         
     }
 

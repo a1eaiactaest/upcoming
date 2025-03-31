@@ -16,7 +16,8 @@ class CalendarManager: NSObject, ObservableObject {
     
     private var observer: Any?
     
-    init() {
+    override init() {
+        super.init()
         startObserving()
     }
     

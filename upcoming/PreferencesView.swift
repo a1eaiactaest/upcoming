@@ -12,6 +12,8 @@ struct PreferencesView: View {
     @EnvironmentObject var preferences: Preferences
     @EnvironmentObject var calendarManager: CalendarManager
     
+    @State private var refreshFlag = false;
+    
     var body: some View {
         Form {
             Section(header: Text("Display")) {
@@ -55,6 +57,11 @@ struct PreferencesView: View {
         }
         .padding(10)
         .frame(minWidth: 400, idealWidth: 450, maxWidth: 500)
+        .onReceive(
+            NotificationCenter.default.publisher(for: .calendarDataDidChange)) {
+                _ in refreshFlag.toggle()
+            }
+            .id(refreshFlag)
     }
     
     private func calendarBinding(for calendar: EKCalendar) -> Binding<Bool> {
@@ -63,23 +70,22 @@ struct PreferencesView: View {
                 preferences.selectedCalendarIds.contains(calendar.calendarIdentifier) ||
                 preferences.selectedCalendarIds.isEmpty
             },
-            set: {
-                isSelected in
+            set: { isSelected in
+                var newSelection = preferences.selectedCalendarIds
                 if isSelected {
-                    if !preferences.selectedCalendarIds.isEmpty {
-                        preferences.selectedCalendarIds.append(
-                            calendar.calendarIdentifier
-                        )
+                    if !newSelection.isEmpty && !newSelection.contains(calendar.calendarIdentifier) {
+                        newSelection.append(calendar.calendarIdentifier)
                     }
                 } else {
-                    if preferences.selectedCalendarIds.isEmpty {
-                        preferences.selectedCalendarIds = calendarManager.calendars
+                    if newSelection.isEmpty {
+                        newSelection = calendarManager.calendars
                             .map { $0.calendarIdentifier }
                             .filter { $0 != calendar.calendarIdentifier }
                     } else {
-                        preferences.selectedCalendarIds.removeAll { $0 == calendar.calendarIdentifier}
+                        newSelection.removeAll { $0 == calendar.calendarIdentifier }
                     }
                 }
+                preferences.selectedCalendarIds = newSelection
             }
         )
     }
