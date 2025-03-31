@@ -86,9 +86,14 @@ class CalendarManager: NSObject, ObservableObject {
     
     
     func loadCalendars() async throws {
-        let granted = try await eventStore.requestFullAccessToEvents()
-        guard granted else {
-            throw CalendarError.accessDenied
+        let status = EKEventStore.authorizationStatus(for: .event)
+        
+        // Always request access if not fully authorized
+        if status != .fullAccess {
+            let granted = try await eventStore.requestFullAccessToEvents()
+            guard granted else {
+                throw CalendarError.accessDenied
+            }
         }
         
         let calendars = eventStore.calendars(for: .event)
@@ -96,7 +101,6 @@ class CalendarManager: NSObject, ObservableObject {
         
         await MainActor.run {
             self.calendars = calendars
-            // Notify about the change
             NotificationCenter.default.post(
                 name: .calendarDataDidChange,
                 object: self.calendars

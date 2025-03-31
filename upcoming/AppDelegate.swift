@@ -26,9 +26,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupCalendarObservation()
         setupMenuBar()
         Task {
-            if await requestCalendarAccess() {
-                try? await calendarManager.loadCalendars()
-            }
+            // Request calendar access immediately on launch
+            try? await requestCalendarAccess()
+            try? await calendarManager.loadCalendars()
             startTimer()
         }
     }
@@ -71,11 +71,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let preferencesWindow = NSApp.windows.first(where: { $0.title == "Preferences"}) {
             preferencesWindow.contentView?.needsDisplay = true
             if let hostingView = preferencesWindow.contentView as? NSHostingView<PreferencesView> {
-                hostingView.rootView = PreferencesView()
-                    .environmentObject(calendarManager)
-                    .environmentObject(preferences) as! PreferencesView
+                let newView = PreferencesView()
+                hostingView.rootView = newView
+                let hosting = NSHostingView(rootView: newView
+                    .environmentObject(preferences)
+                    .environmentObject(calendarManager))
+                preferencesWindow.contentView = hosting
             }
-                
         }
     }
     
@@ -110,14 +112,31 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     }
     
-    private func requestCalendarAccess() async -> Bool {
-        do {
-            return try await eventStore.requestFullAccessToEvents()
-        } catch {
-            showErrorAlert(
-                title: "Calendar Access Error",
-                message: "Could not access your calendars. Please check your privacy settings."
-            )
+    private func requestCalendarAccess() async throws -> Bool {
+        let status = EKEventStore.authorizationStatus(for: .event)
+        
+        switch status {
+        case .notDetermined, .restricted, .denied:
+            // Always request access if not authorized
+            do {
+                let granted = try await eventStore.requestFullAccessToEvents()
+                if !granted {
+                    showErrorAlert(
+                        title: "Calendar Access Required",
+                        message: "This app requires calendar access to function. Please enable it in System Settings > Privacy & Security > Calendars"
+                    )
+                }
+                return granted
+            } catch {
+                showErrorAlert(
+                    title: "Calendar Access Error",
+                    message: "Could not access your calendars: \(error.localizedDescription)"
+                )
+                return false
+            }
+        case .authorized, .fullAccess:
+            return true
+        @unknown default:
             return false
         }
     }
@@ -293,34 +312,37 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func openPreferences() {
         if let existingWindow = NSApp.windows.first(where: { $0.title == "Preferences" }) {
-                existingWindow.makeKeyAndOrderFront(nil)
-                return
-            }
-            
-            let view = PreferencesView()
-                .environmentObject(preferences)
-                .environmentObject(calendarManager)
-            
-            let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 450, height: 300),
-                styleMask: [.titled, .closable],
-                backing: .buffered,
-                defer: false
-            )
-            window.title = "Preferences"
-            window.contentView = NSHostingView(rootView: view)
-            window.center()
-            window.makeKeyAndOrderFront(nil)
-            
-            // Close window when preferences close
-            NotificationCenter.default.addObserver(
-                forName: NSWindow.willCloseNotification,
-                object: window,
-                queue: nil
-            ) { _ in
-                // Clean up any resources if needed
-            }
+            existingWindow.makeKeyAndOrderFront(nil)
+            return
+        }
         
+        let view = PreferencesView()
+            .environmentObject(preferences)
+            .environmentObject(calendarManager)
+        
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 450, height: 300),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Preferences"
+        window.contentView = NSHostingView(rootView: view)
+        window.center()
+        
+        // Hold a reference to the window
+        let windowController = NSWindowController(window: window)
+        windowController.showWindow(nil)
+        
+        // Close window when preferences close
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: nil
+        ) { [weak windowController] _ in
+            // Release the window controller when window closes
+            _ = windowController
+        }
     }
 
     @objc func statusBarButtonClicked(_ sender : NSStatusBarButton) {

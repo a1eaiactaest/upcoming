@@ -7,5 +7,7 @@
 		<key>NSExceptionDomains</key>
 		<dict/>
 	</dict>
+	<key>NSCalendarsUsageDescription</key>
+	<string>This app needs access to your calendars to show upcoming events.</string>
 </dict>
 </plist>
