@@ -150,13 +150,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func updateMenuBar() {
         guard let nextEvent = fetchNextEvent() else {
             statusBarItem?.button?.title = "No upcoming events"
+            statusBarItem?.button?.image = nil
             updateMenuItems(with: nil)
             return
         }
 
+        // Create color indicator image
+        let color = nextEvent.calendar.color
+        let image = NSImage(size: NSSize(width: 12, height: 12), flipped: false) { rect in
+            let path = NSBezierPath()
+            let midX = rect.midX
+            path.move(to: NSPoint(x: midX, y: rect.minY))
+            path.line(to: NSPoint(x: midX, y: rect.maxY))
+            path.lineWidth = 4
+            color?.setStroke()
+            path.stroke()
+            return true
+        }
+        
         let timeLeft = timeUntilEvent(nextEvent)
         let title = "\(nextEvent.title) \(timeLeft)"
-        statusBarItem?.button?.title = title
+        
+        if let button = statusBarItem?.button {
+            button.image = image
+            button.image?.size = NSSize(width: 12, height: 12)
+            button.imagePosition = .imageLeft
+            button.title = title
+        }
+        
         updateMenuItems(with: nextEvent)
     }
 
