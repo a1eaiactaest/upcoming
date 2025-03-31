@@ -23,11 +23,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // swiftlint: disable line_length
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // main loop i guess
         setupCalendarObservation()
         setupMenuBar()
         Task {
-            await requestCalendarAccess()
+            if await requestCalendarAccess() {
+                try? await calendarManager.loadCalendars()
+            }
             startTimer()
         }
     }
