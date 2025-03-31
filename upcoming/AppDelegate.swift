@@ -11,6 +11,22 @@ import AppKit
 import EventKit
 import SwiftUI
 import Combine
+import ObjectiveC
+
+extension NSStatusItem {
+    private static var mainMenuKey = "mainMenuKey"
+    private static var settingsMenuKey = "settingsMenuKey"
+    
+    var mainMenu: NSMenu? {
+        get { objc_getAssociatedObject(self, &NSStatusItem.mainMenuKey) as? NSMenu }
+        set { objc_setAssociatedObject(self, &NSStatusItem.mainMenuKey, newValue, .OBJC_ASSOCIATION_RETAIN) }
+    }
+    
+    var settingsMenu: NSMenu? {
+        get { objc_getAssociatedObject(self, &NSStatusItem.settingsMenuKey) as? NSMenu }
+        set { objc_setAssociatedObject(self, &NSStatusItem.settingsMenuKey, newValue, .OBJC_ASSOCIATION_RETAIN) }
+    }
+}
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var calendarManager = CalendarManager()
@@ -86,30 +102,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         if let button = statusBarItem?.button {
             button.title = "Loading.."
+            button.target = self
+            button.action = #selector(statusBarButtonClicked(_:))
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
         
-        let menu = NSMenu()
+        // Create two separate menus
+        let mainMenu = NSMenu()
+        let settingsMenu = NSMenu()
         
-        menu.addItem(NSMenuItem(
-            title: "Loading",
-            action: nil,
-            keyEquivalent: "")
-        )
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(
+        // Setup settings menu
+        settingsMenu.addItem(NSMenuItem(
             title: "Preferences",
             action: #selector(openPreferences),
             keyEquivalent: ",")
         )
-        menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(
+        settingsMenu.addItem(NSMenuItem.separator())
+        settingsMenu.addItem(NSMenuItem(
             title: "Quit",
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: "q"
         ))
         
-        statusBarItem?.menu = menu
-
+        statusBarItem.mainMenu = mainMenu
+        statusBarItem.settingsMenu = settingsMenu
     }
     
     private func requestCalendarAccess() async throws -> Bool {
@@ -151,7 +167,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard let nextEvent = fetchNextEvent() else {
             statusBarItem?.button?.title = "No upcoming events"
             statusBarItem?.button?.image = nil
-            updateMenuItems(with: nil)
+            updateEventMenu() // Update menu to show "No upcoming events"
             return
         }
 
@@ -176,7 +192,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.title = title
         }
         
-        updateMenuItems(with: nextEvent)
+        updateEventMenu()
     }
 
     func fetchNextEvent() -> EKEvent? {
@@ -342,9 +358,63 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc func statusBarButtonClicked(_ sender : NSStatusBarButton) {
-        print("menu bar item clicked edit")
-        // TODO: handling logic here
+    @objc func statusBarButtonClicked(_ sender: NSStatusBarButton) {
+        guard let event = NSApp.currentEvent else { return }
+        
+        if event.type == .rightMouseUp || event.modifierFlags.contains(.control) {
+            statusBarItem.menu = statusBarItem.settingsMenu
+            statusBarItem.menu?.popUp(positioning: nil, at: NSPoint(x: 0, y: 0), in: sender)
+        } else {
+            statusBarItem.menu = statusBarItem.mainMenu
+            updateEventMenu()
+            statusBarItem.menu?.popUp(positioning: nil, at: NSPoint(x: 0, y: 0), in: sender)
+        }
+    }
+
+    private func updateEventMenu() {
+        guard let menu = statusBarItem.mainMenu else { return }
+        menu.removeAllItems()
+        
+        if let event = fetchNextEvent() {
+            // Add event title
+            menu.addItem(NSMenuItem(
+                title: event.title ?? "Untitled Event",
+                action: nil,
+                keyEquivalent: ""
+            ))
+            
+            // Add time
+            menu.addItem(NSMenuItem(
+                title: "\(event.startDate.formatted()) - \(event.endDate.formatted())",
+                action: nil,
+                keyEquivalent: ""
+            ))
+            
+            // Add location if available
+            if let location = event.location, !location.isEmpty {
+                menu.addItem(NSMenuItem(
+                    title: location,
+                    action: nil,
+                    keyEquivalent: ""
+                ))
+            }
+            
+            // Add skip option
+            menu.addItem(NSMenuItem.separator())
+            let skipItem = NSMenuItem(
+                title: "Skip >>",
+                action: #selector(skipEvent),
+                keyEquivalent: ""
+            )
+            skipItem.representedObject = event
+            menu.addItem(skipItem)
+        } else {
+            menu.addItem(NSMenuItem(
+                title: "No upcoming events",
+                action: nil,
+                keyEquivalent: ""
+            ))
+        }
     }
 
     private func setupMyApp() {
