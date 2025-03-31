@@ -155,34 +155,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let timeLeft = timeUntilEvent(nextEvent)
-        let title = "\(nextEvent.title) in \(timeLeft)"
+        let title = "\(nextEvent.title) \(timeLeft)"
         statusBarItem?.button?.title = title
+        updateMenuItems(with: nextEvent)
     }
 
     func fetchNextEvent() -> EKEvent? {
-        /*
-        let calendars: [EKCalendar]
-        if !preferences.selectedCalendarIds.isEmpty {
-            calendars = eventStore.calendars(for: .event)
-                .filter {
-                    preferences.selectedCalendarIds.contains($0.calendarIdentifier)
-                }
-        } else {
-            calendars = eventStore.calendars(for: .event)
-        }
-        
-        let now = Date()
-        let endDate = Calendar.current.date(byAdding: .day, value: 1, to: now)!
-        let predicate = eventStore.predicateForEvents(
-            withStart: now,
-            end: endDate,
-            calendars: calendars
-        )
-        let events = eventStore.events(matching: predicate)
-            .filter { !$0.isAllDay }
-            .sorted { $0.startDate < $1.startDate }
-        return events.first
-        */
         let calendars = calendarManager.filteredCalendars(selectedIDs: preferences.selectedCalendarIds)
         let now = Date()
         let endDate = Calendar.current.date(byAdding: .day, value: 1, to: now)!
@@ -193,19 +171,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             calendars: calendars
         )
         
-        return calendarManager.eventStore.events(matching: predicate)
+        let events = calendarManager.eventStore.events(matching: predicate)
             .filter { !$0.isAllDay }
             .sorted { $0.startDate < $1.startDate }
-            .first
-
         
+        // First check for ongoing events
+        if let currentEvent = events.first(where: { 
+            $0.startDate <= now && $0.endDate > now 
+        }) {
+            return currentEvent
+        }
+        
+        // If no ongoing events, return the next upcoming event
+        return events.first
     }
 
     func timeUntilEvent(_ event: EKEvent) -> String {
+        let now = Date()
         let formatter = DateComponentsFormatter()
         formatter.allowedUnits = [.hour, .minute]
         formatter.unitsStyle = .abbreviated
-        return formatter.string(from: Date(), to: event.startDate) ?? ""
+        
+        // If event is ongoing, show time until it ends
+        if event.startDate <= now && event.endDate > now {
+            return (formatter.string(from: now, to: event.endDate) ?? "" + "left")
+        }
+        
+        // Otherwise show time until event starts
+        return "in " + (formatter.string(from: now, to: event.startDate) ?? "")
     }
 
     func updateMenuItems(with event: EKEvent?) {
