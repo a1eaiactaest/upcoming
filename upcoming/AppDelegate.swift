@@ -200,11 +200,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func fetchNextEvent() -> EKEvent? {
         let calendars = calendarManager.filteredCalendars(selectedIDs: preferences.selectedCalendarIds)
         let now = Date()
-        let adjustedNow = Calendar.current.date(byAdding: .minute, value: 1, to: now)!
-        let endDate = Calendar.current.date(byAdding: .day, value: 1, to: adjustedNow)!
-        
+        let endDate = Calendar.current.date(byAdding: .day, value: 1, to: now)!
+
         let predicate = calendarManager.eventStore.predicateForEvents(
-            withStart: adjustedNow,
+            withStart: now,
             end: endDate,
             calendars: calendars
         )
@@ -212,15 +211,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let events = calendarManager.eventStore.events(matching: predicate)
             .filter { !$0.isAllDay }
             .sorted { $0.startDate < $1.startDate }
-        
-        // First check for ongoing events
-        if let currentEvent = events.first(where: { 
-            $0.startDate <= now && $0.endDate > adjustedNow
-        }) {
-            return currentEvent
+
+        print("fetched events: \(events.map { $0.title ?? "untitled" })")
+
+
+        if let ongoingEvent = events.first(where: { $0.startDate <= now && $0.endDate > now }) {
+            return ongoingEvent
         }
-        
-        // If no ongoing events, return the next upcoming event
         return events.first
     }
 
@@ -230,8 +227,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         formatter.allowedUnits = [.hour, .minute]
         formatter.unitsStyle = .abbreviated
         
-        let adjustedNow = Calendar.current.date(byAdding: .minute, value: 1, to: now)!
-        
+        let adjustedNow = Calendar.current.date(byAdding: .minute, value: -1, to: now)!
+
         // If event is ongoing, show time until it ends
         if event.startDate <= adjustedNow && event.endDate > adjustedNow {
             return ((formatter.string(from: adjustedNow, to: event.endDate) ?? "") + " left")
@@ -398,7 +395,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-// Create new SwiftUI views for the popovers
 struct EventMenuView: View {
     @EnvironmentObject var preferences: Preferences
     @EnvironmentObject var calendarManager: CalendarManager
@@ -408,26 +404,48 @@ struct EventMenuView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let event = appDelegate?.fetchNextEvent() {
-                Text(event.title ?? "Untitled Event")
-                    .font(.headline)
-                Text("\(event.startDate.formatted()) - \(event.endDate.formatted())")
-                    .font(.subheadline)
-                if let location = event.location {
-                    Text(location)
+        VStack(alignment: .leading, spacing: 0) {
+            if let event = currentEvent ?? appDelegate.fetchNextEvent() {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(event.title ?? "Untitled Event")
+                        .font(.system(size: 13, weight: .medium))
+                        .lineLimit(2)
+                    //.font(.headline)
+                    Text("\(event.startDate.formatted()) - \(event.endDate.formatted())")
                         .font(.subheadline)
-                }
-                Divider()
-                Button("Skip >>") {
-                    if let delegate = appDelegate {
-                        //delegate.skipEvent(NSMenuItem(representedObject: event))
-                        delegate.performEventDeletion(event)
+                    if let location = event.location {
+                        Text(location)
+                            .font(.subheadline)
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+
+                Divider()
+                    .padding(.vertical, 4)
+
+                Button(action: {
+                    appDelegate.performEventDeletion(event)
+                }) {
+                    HStack {
+                        Text("Skip")
+                        Spacer()
+                        Text("⌘S")
+                            .foregroundColor(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                    .buttonStyle(PlainButtonStyle())
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                    .keyboardShortcut("s", modifiers: .command)
             } else {
                 Text("No upcoming events")
-                    .font(.headline)
+                    .font(.system(size: 13))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                //.font(.headline)
             }
         }
         .padding()
