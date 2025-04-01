@@ -28,7 +28,7 @@ extension NSStatusItem {
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var calendarManager = CalendarManager()
     private var cancellables = Set<AnyCancellable>()
     
@@ -127,6 +127,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             rootView: EventMenuView()
                 .environmentObject(preferences)
                 .environmentObject(calendarManager)
+                .environmentObject(self)
         )
     }
     
@@ -398,11 +399,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 struct EventMenuView: View {
     @EnvironmentObject var preferences: Preferences
     @EnvironmentObject var calendarManager: CalendarManager
-    
-    var appDelegate: AppDelegate? {
-        NSApp.delegate as? AppDelegate
-    }
-    
+    @EnvironmentObject var appDelegate: AppDelegate
+
+    @State private var currentEvent: EKEvent!
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if let event = currentEvent ?? appDelegate.fetchNextEvent() {
@@ -448,6 +448,16 @@ struct EventMenuView: View {
                 //.font(.headline)
             }
         }
-        .padding()
+        .padding(.vertical, 6)
+        .frame(width: 220)
+        .onAppear() {
+            currentEvent = appDelegate.fetchNextEvent()
+            print("onAppear Event in EventMenuView:", currentEvent?.title ?? "No event found")
+
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .calendarDataDidChange)) { _ in
+            currentEvent = appDelegate.fetchNextEvent()
+            print("onRecieve Event in EventMenuView:", currentEvent?.title ?? "No event found")
+        }
     }
 }
