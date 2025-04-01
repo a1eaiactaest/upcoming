@@ -200,10 +200,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func fetchNextEvent() -> EKEvent? {
         let calendars = calendarManager.filteredCalendars(selectedIDs: preferences.selectedCalendarIds)
         let now = Date()
-        let endDate = Calendar.current.date(byAdding: .day, value: 1, to: now)!
+        let adjustedNow = Calendar.current.date(byAdding: .minute, value: 1, to: now)!
+        let endDate = Calendar.current.date(byAdding: .day, value: 1, to: adjustedNow)!
         
         let predicate = calendarManager.eventStore.predicateForEvents(
-            withStart: now,
+            withStart: adjustedNow,
             end: endDate,
             calendars: calendars
         )
@@ -214,7 +215,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // First check for ongoing events
         if let currentEvent = events.first(where: { 
-            $0.startDate <= now && $0.endDate > now 
+            $0.startDate <= now && $0.endDate > adjustedNow
         }) {
             return currentEvent
         }
@@ -229,13 +230,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         formatter.allowedUnits = [.hour, .minute]
         formatter.unitsStyle = .abbreviated
         
+        let adjustedNow = Calendar.current.date(byAdding: .minute, value: 1, to: now)!
+        
         // If event is ongoing, show time until it ends
-        if event.startDate <= now && event.endDate > now {
-            return ((formatter.string(from: now, to: event.endDate) ?? "") + " left")
+        if event.startDate <= adjustedNow && event.endDate > adjustedNow {
+            return ((formatter.string(from: adjustedNow, to: event.endDate) ?? "") + " left")
         }
         
         // Otherwise show time until event starts
-        return "in " + (formatter.string(from: now, to: event.startDate) ?? "")
+        return "in " + (formatter.string(from: adjustedNow, to: event.startDate) ?? "")
     }
    
     @objc func skipEvent(_ sender: NSMenuItem) {
