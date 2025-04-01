@@ -213,7 +213,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             .filter { !$0.isAllDay }
             .sorted { $0.startDate < $1.startDate }
 
-        print("fetched events: \(events.map { $0.title ?? "untitled" })")
 
 
         if let ongoingEvent = events.first(where: { $0.startDate <= now && $0.endDate > now }) {
@@ -452,12 +451,10 @@ struct EventMenuView: View {
         .frame(width: 220)
         .onAppear() {
             currentEvent = appDelegate.fetchNextEvent()
-            print("onAppear Event in EventMenuView:", currentEvent?.title ?? "No event found")
 
         }
         .onReceive(NotificationCenter.default.publisher(for: .calendarDataDidChange)) { _ in
             currentEvent = appDelegate.fetchNextEvent()
-            print("onRecieve Event in EventMenuView:", currentEvent?.title ?? "No event found")
         }
     }
 }
