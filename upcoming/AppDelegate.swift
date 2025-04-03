@@ -9,6 +9,7 @@
 import Foundation
 import AppKit
 import EventKit
+import MapKit
 import SwiftUI
 import Combine
 import ObjectiveC
@@ -401,6 +402,7 @@ struct EventMenuView: View {
     @EnvironmentObject var appDelegate: AppDelegate
 
     @State private var currentEvent: EKEvent!
+    @State private var coordinate: CLLocationCoordinate2D?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -415,6 +417,14 @@ struct EventMenuView: View {
                     if let location = event.location {
                         Text(location)
                             .font(.subheadline)
+                            .onTapGesture {
+                                openAppleMaps(location: location)
+                            }
+                        if let coordinate = coordinate {
+                            MapView(coordinate: coordinate)
+                                .frame(height: 150)
+                                .cornerRadius(10)
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -451,10 +461,33 @@ struct EventMenuView: View {
         .frame(width: 220)
         .onAppear() {
             currentEvent = appDelegate.fetchNextEvent()
+            if let location = currentEvent?.location {
+                fetchCoordinates(for: location)
+            }
 
         }
         .onReceive(NotificationCenter.default.publisher(for: .calendarDataDidChange)) { _ in
             currentEvent = appDelegate.fetchNextEvent()
+            if let location = currentEvent?.location {
+                fetchCoordinates(for: location)
+            }
+        }
+    }
+
+    func fetchCoordinates(for address: String) {
+        let geocoder = CLGeocoder()
+        geocoder.geocodeAddressString(address) { placemarks, error in
+            if let firstPlacemark = placemarks?.first,
+               let location = firstPlacemark.location {
+                coordinate = location.coordinate
+            }
+        }
+    }
+
+    func openAppleMaps(location: String) {
+        let encodedLocation = location.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: "https://maps.apple.com/?q=\(encodedLocation)") {
+            NSWorkspace.shared.open(url)
         }
     }
 }
