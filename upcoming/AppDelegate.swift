@@ -214,8 +214,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             .filter { !$0.isAllDay }
             .sorted { $0.startDate < $1.startDate }
 
-
-
         if let ongoingEvent = events.first(where: { $0.startDate <= now && $0.endDate > now }) {
             return ongoingEvent
         }
@@ -320,14 +318,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                           (event.type == .leftMouseUp && event.modifierFlags.contains(.control))
         
         if isRightClick {
-            /*
-            if settingsPopover?.isShown == true {
-                settingsPopover?.close()
-            } else {
-                mainPopover?.close()
-                settingsPopover?.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
-            }
-             */
             if let settingsMenu = statusBarItem.settingsMenu {
                 statusBarItem.menu = settingsMenu
                 statusBarItem.button?.performClick(nil)
@@ -337,9 +327,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             if mainPopover?.isShown == true {
                 mainPopover?.close()
             } else {
-                //settingsPopover?.close()
                 updateEventMenu()
-                mainPopover?.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
+                if let button = statusBarItem.button {
+                    mainPopover?.show(
+                        relativeTo: button.bounds,
+                        of: button,
+                        preferredEdge: .minY
+                    )
+                }
             }
         }
     }
@@ -424,6 +419,8 @@ struct EventMenuView: View {
                             MapView(coordinate: coordinate, location: location)
                                 .frame(height: 150)
                                 .cornerRadius(10)
+                                .padding(.vertical, 8)
+
                         }
                     }
                 }

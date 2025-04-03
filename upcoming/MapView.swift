@@ -24,10 +24,17 @@ struct MapView: View {
     }
 
     var body: some View {
-        Map(position: $cameraPosition) {
-            Marker(location, coordinate: coordinate)
+        VStack {
+            GeometryReader { geometry in
+                Map(position: $cameraPosition) {
+                    Marker(location, coordinate: coordinate)
+                }
+                .cornerRadius(10)
+            }
+            .frame(height: 150)
+            .border(Color.blue)
         }
-        .frame(height: 150)
-        .cornerRadius(10)
+        .border(Color.green)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
