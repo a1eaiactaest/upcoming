@@ -10,10 +10,13 @@ import MapKit
 
 struct MapView: View {
     var coordinate: CLLocationCoordinate2D
+    var location: String
+
     @State private var cameraPosition: MapCameraPosition
 
-    init(coordinate: CLLocationCoordinate2D) {
+    init(coordinate: CLLocationCoordinate2D, location: String) {
         self.coordinate = coordinate
+        self.location = location
         _cameraPosition = State(initialValue: .region(MKCoordinateRegion(
             center: coordinate,
             span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
@@ -22,7 +25,7 @@ struct MapView: View {
 
     var body: some View {
         Map(position: $cameraPosition) {
-            Marker("Event Location", coordinate: coordinate)
+            Marker(location, coordinate: coordinate)
         }
         .frame(height: 150)
         .cornerRadius(10)

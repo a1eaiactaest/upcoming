@@ -421,7 +421,7 @@ struct EventMenuView: View {
                                 openAppleMaps(location: location)
                             }
                         if let coordinate = coordinate {
-                            MapView(coordinate: coordinate)
+                            MapView(coordinate: coordinate, location: location)
                                 .frame(height: 150)
                                 .cornerRadius(10)
                         }
