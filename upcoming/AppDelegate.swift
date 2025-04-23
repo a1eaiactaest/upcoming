@@ -37,11 +37,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     var eventStore = EKEventStore()
     var timer: Timer?
     var preferences = Preferences()
-    
-    // Add these properties
-    private var mainPopover: NSPopover?
-    private var settingsPopover: NSPopover?
-    
+
     // swiftlint: disable line_length
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupCalendarObservation()
@@ -111,25 +107,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             button.action = #selector(statusBarButtonClicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
-        
-        
+
+        let mainMenu = NSMenu()
+        statusBarItem.mainMenu = mainMenu
+
+
         let settingsMenu = NSMenu()
         settingsMenu.addItem(withTitle: "Preferences...", action: #selector(openPreferences), keyEquivalent: ",")
         settingsMenu.addItem(NSMenuItem.separator())
         settingsMenu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         statusBarItem.settingsMenu = settingsMenu
-        
-        
-        
-        mainPopover = NSPopover()
-        mainPopover?.behavior = .transient
-        mainPopover?.contentSize = NSSize(width: 300, height: 400)
-        mainPopover?.contentViewController = NSHostingController(
-            rootView: EventMenuView()
-                .environmentObject(preferences)
-                .environmentObject(calendarManager)
-                .environmentObject(self)
-        )
     }
     
     private func requestCalendarAccess() async throws -> Bool {
@@ -324,17 +311,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 statusBarItem.menu = nil
             }
         } else {
-            if mainPopover?.isShown == true {
-                mainPopover?.close()
-            } else {
-                updateEventMenu()
-                if let button = statusBarItem.button {
-                    mainPopover?.show(
-                        relativeTo: button.bounds,
-                        of: button,
-                        preferredEdge: .minY
-                    )
-                }
+            updateMenuBar()
+            if let mainMenu = statusBarItem.mainMenu {
+                statusBarItem.menu = mainMenu
+                statusBarItem.button?.performClick(nil)
+                statusBarItem.menu = nil
             }
         }
     }
@@ -345,12 +326,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         
         if let event = fetchNextEvent() {
             // Add event title
-            menu.addItem(NSMenuItem(
-                title: event.title ?? "Untitled Event",
-                action: nil,
-                keyEquivalent: ""
-            ))
-            
+            menu.addItem(
+                NSMenuItem(
+                    title: event.title ?? "Untitled Event",
+                    action: nil,
+                    keyEquivalent: ""
+                )
+            )
+
             // Add time
             menu.addItem(NSMenuItem(
                 title: "\(event.startDate.formatted()) - \(event.endDate.formatted())",
@@ -360,21 +343,45 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
             
             // Add location if available
             if let location = event.location, !location.isEmpty {
-                menu.addItem(NSMenuItem(
+                let addressItem = NSMenuItem(
                     title: location,
-                    action: nil,
+                    action: #selector(openLocationInMaps(_:)),
                     keyEquivalent: ""
-                ))
+                )
+                addressItem.representedObject = location
+                addressItem.target = self
+                menu.addItem(addressItem)
+
+                let mapItem = NSMenuItem()
+                let mapView = MapMenuItemView(
+                    location: location,
+                    frame: NSRect(x: 0, y: 0, width: 220, height: 150)
+                )
+
+                mapItem.view = mapView
+                menu.addItem(mapItem)
             }
             
             // Add skip option
             menu.addItem(NSMenuItem.separator())
+
+            let openItem = NSMenuItem(
+                title: "Open",
+                action: #selector(openEventInCalendar),
+                keyEquivalent: "o"
+            )
+            openItem.representedObject = event
+            openItem.target = self
+            menu.addItem(openItem)
+
+
             let skipItem = NSMenuItem(
                 title: "Skip >>",
                 action: #selector(skipEvent),
-                keyEquivalent: ""
+                keyEquivalent: "s"
             )
             skipItem.representedObject = event
+            skipItem.target = self
             menu.addItem(skipItem)
         } else {
             menu.addItem(NSMenuItem(
@@ -385,106 +392,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         }
     }
 
+    @objc func openEventInCalendar(_ sender: NSMenuItem) {
+        guard let event = sender.representedObject as? EKEvent else { return }
+        NSWorkspace.shared.open(URL(string: "ical://ekevent/\(event.eventIdentifier!)")!)
+    }
+
+    @objc func openLocationInMaps(_ sender: NSMenuItem) {
+        guard let location = sender.representedObject as? String else { return }
+        let encodedLocation = location.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: "https://maps.apple.com/?q=\(encodedLocation)") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
     private func setupMyApp() {
         // TODO: Add any intialization steps here.
         print("Application started up!")
     }
 }
 
-struct EventMenuView: View {
-    @EnvironmentObject var preferences: Preferences
-    @EnvironmentObject var calendarManager: CalendarManager
-    @EnvironmentObject var appDelegate: AppDelegate
-
-    @State private var currentEvent: EKEvent!
-    @State private var coordinate: CLLocationCoordinate2D?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if let event = currentEvent ?? appDelegate.fetchNextEvent() {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(event.title ?? "Untitled Event")
-                        .font(.system(size: 13, weight: .medium))
-                        .lineLimit(2)
-                    //.font(.headline)
-                    Text("\(event.startDate.formatted()) - \(event.endDate.formatted())")
-                        .font(.subheadline)
-                    if let location = event.location {
-                        Text(location)
-                            .font(.subheadline)
-                            .onTapGesture {
-                                openAppleMaps(location: location)
-                            }
-                        if let coordinate = coordinate {
-                            MapView(coordinate: coordinate, location: location)
-                                .frame(height: 150)
-                                .cornerRadius(10)
-                                .padding(.vertical, 8)
-
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-
-                Divider()
-                    .padding(.vertical, 4)
-
-                Button(action: {
-                    appDelegate.performEventDeletion(event)
-                }) {
-                    HStack {
-                        Text("Skip")
-                        Spacer()
-                        Text("⌘S")
-                            .foregroundColor(.secondary)
-                    }
-                    .contentShape(Rectangle())
-                }
-                    .buttonStyle(PlainButtonStyle())
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 6)
-                    .keyboardShortcut("s", modifiers: .command)
-            } else {
-                Text("No upcoming events")
-                    .font(.system(size: 13))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                //.font(.headline)
-            }
-        }
-        .padding(.vertical, 6)
-        .frame(width: 220)
-        .onAppear() {
-            currentEvent = appDelegate.fetchNextEvent()
-            if let location = currentEvent?.location {
-                fetchCoordinates(for: location)
-            }
-
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .calendarDataDidChange)) { _ in
-            currentEvent = appDelegate.fetchNextEvent()
-            if let location = currentEvent?.location {
-                fetchCoordinates(for: location)
-            }
-        }
-    }
-
-    func fetchCoordinates(for address: String) {
-        let geocoder = CLGeocoder()
-        geocoder.geocodeAddressString(address) { placemarks, error in
-            if let firstPlacemark = placemarks?.first,
-               let location = firstPlacemark.location {
-                coordinate = location.coordinate
-            }
-        }
-    }
-
-    func openAppleMaps(location: String) {
-        let encodedLocation = location.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-        if let url = URL(string: "https://maps.apple.com/?q=\(encodedLocation)") {
-            NSWorkspace.shared.open(url)
-        }
-    }
-}

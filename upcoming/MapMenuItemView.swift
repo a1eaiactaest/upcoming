@@ -16,7 +16,7 @@ class MapMenuItemView: NSView {
         self.location = location
         super.init(frame: frame)
         setupMapView()
-        geocodeLocation()
+        fetchCoordinates()
     }
 
     required init?(coder: NSCoder) {
@@ -24,37 +24,73 @@ class MapMenuItemView: NSView {
     }
 
     private func setupMapView() {
+        mapView.wantsLayer = true
+        mapView.layer?.cornerRadius = 10
+        mapView.layer?.masksToBounds = true
+        mapView.layer?.borderWidth = 1
+        mapView.layer?.borderColor = NSColor.systemBlue.cgColor
+
         mapView.frame = bounds
+
         mapView.isZoomEnabled = false
         mapView.isScrollEnabled = false
         mapView.isRotateEnabled = false
         mapView.isPitchEnabled = false
         mapView.showsZoomControls = false
         mapView.showsCompass = false
+
         addSubview(mapView)
     }
 
-    private func geocodeLocation() {
+    private func fetchCoordinates() {
         let geocoder = CLGeocoder()
         geocoder.geocodeAddressString(location) { [weak self] placemarks, error in
-            guard let self = self, let placemark = placemarks?.first, let location = placemark.location else { return }
+            DispatchQueue.main.async {
+                guard let self = self else { return }
 
-            self.coordinate = location.coordinate
-            let annotation = MKPointAnnotation()
-            annotation.coordinate = location.coordinate
-            annotation.title = self.location
-            self.mapView.addAnnotation(annotation)
+                if let error = error {
+                    print("Geocoding error: \(error.localizedDescription)")
+                    self.showErrorView()
+                    return
+                }
 
-            let region = MKCoordinateRegion(
-                center: location.coordinate,
-                span: MKCoordinateSpan(
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01
-                )
-            )
-            self.mapView.setRegion(region, animated: false)
+                guard let placemark = placemarks?.first,
+                      let location = placemark.location else {
+                    self.showErrorView()
+                    return
+                }
+
+                self.updateMap(with: location.coordinate)
+            }
         }
     }
+
+    private func updateMap(with coordinate: CLLocationCoordinate2D) {
+        self.coordinate = coordinate
+
+        let annotation = MKPointAnnotation()
+        annotation.coordinate = coordinate
+        annotation.title = location
+        mapView.addAnnotation(annotation)
+
+        let region = MKCoordinateRegion(
+            center: coordinate,
+            span: MKCoordinateSpan(
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01
+            )
+        )
+        mapView.setRegion(region, animated: false)
+    }
+
+    private func showErrorView() {
+        let errorLabel = NSTextField(labelWithString: "Map unavailable")
+        errorLabel.frame = bounds
+        errorLabel.alignment = .center
+        addSubview(errorLabel)
+    }
+
+
 
     override func draw(_ dirtyRect: NSRect) {
         NSColor.controlBackgroundColor.setFill()
