@@ -11,11 +11,14 @@ class MapMenuItemView: NSView {
     private let mapView = MKMapView()
     private let location: String
     private var coordinate: CLLocationCoordinate2D?
+    private let padding: CGFloat = 8
 
     init(location: String, frame: NSRect) {
         self.location = location
         super.init(frame: frame)
         self.autoresizingMask = [.width]
+        self.wantsLayer = true
+        self.layer?.backgroundColor = .clear
         setupMapView()
         fetchCoordinates()
     }
@@ -31,7 +34,13 @@ class MapMenuItemView: NSView {
         //mapView.layer?.borderWidth = 1
         //mapView.layer?.borderColor = NSColor.systemBlue.cgColor
 
-        mapView.frame = bounds
+        let paddedBounds = NSRect(
+            x: bounds.origin.x + padding,
+            y: bounds.origin.y + padding,
+            width: bounds.width - (padding * 2),
+            height: bounds.height - (padding * 2)
+        )
+        mapView.frame = paddedBounds
         mapView.autoresizingMask = [.width, .height]
 
         mapView.isZoomEnabled = false
@@ -46,7 +55,13 @@ class MapMenuItemView: NSView {
 
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
-        mapView.frame = bounds
+        let paddedBounds = NSRect(
+            x: bounds.origin.x + padding,
+            y: bounds.origin.y + padding,
+            width: bounds.width - (padding * 2),
+            height: bounds.height - (padding * 2)
+        )
+        mapView.frame = paddedBounds
     }
 
     override func viewDidMoveToSuperview() {
@@ -102,10 +117,5 @@ class MapMenuItemView: NSView {
         errorLabel.frame = bounds
         errorLabel.alignment = .center
         addSubview(errorLabel)
-    }
-
-    override func draw(_ dirtyRect: NSRect) {
-        NSColor.controlBackgroundColor.setFill()
-        dirtyRect.fill()
     }
 }
