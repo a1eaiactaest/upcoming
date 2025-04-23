@@ -355,10 +355,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 let mapItem = NSMenuItem()
                 let mapView = MapMenuItemView(
                     location: location,
-                    frame: NSRect(x: 0, y: 0, width: 220, height: 150)
+                    frame: NSRect(x: 0, y: 0, width: 250, height: 150)
                 )
-
                 mapItem.view = mapView
+                
+                // Set the menu item size to match the view
+                mapItem.view?.frame.size = NSSize(width: menu.size.width, height: 150)
+                
+                // Ensure the menu item's view fills the width
+                if let customView = mapItem.view {
+                    customView.autoresizingMask = [.width]
+                }
+                
                 menu.addItem(mapItem)
             }
             

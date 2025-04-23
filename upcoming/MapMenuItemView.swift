@@ -15,6 +15,7 @@ class MapMenuItemView: NSView {
     init(location: String, frame: NSRect) {
         self.location = location
         super.init(frame: frame)
+        self.autoresizingMask = [.width]
         setupMapView()
         fetchCoordinates()
     }
@@ -27,19 +28,32 @@ class MapMenuItemView: NSView {
         mapView.wantsLayer = true
         mapView.layer?.cornerRadius = 10
         mapView.layer?.masksToBounds = true
-        mapView.layer?.borderWidth = 1
-        mapView.layer?.borderColor = NSColor.systemBlue.cgColor
+        //mapView.layer?.borderWidth = 1
+        //mapView.layer?.borderColor = NSColor.systemBlue.cgColor
 
         mapView.frame = bounds
+        mapView.autoresizingMask = [.width, .height]
 
         mapView.isZoomEnabled = false
         mapView.isScrollEnabled = false
         mapView.isRotateEnabled = false
         mapView.isPitchEnabled = false
         mapView.showsZoomControls = false
-        mapView.showsCompass = false
+        mapView.showsCompass = true
 
         addSubview(mapView)
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        mapView.frame = bounds
+    }
+
+    override func viewDidMoveToSuperview() {
+        super.viewDidMoveToSuperview()
+        if let superview = superview {
+            frame.size.width = superview.frame.size.width
+        }
     }
 
     private func fetchCoordinates() {
@@ -89,8 +103,6 @@ class MapMenuItemView: NSView {
         errorLabel.alignment = .center
         addSubview(errorLabel)
     }
-
-
 
     override func draw(_ dirtyRect: NSRect) {
         NSColor.controlBackgroundColor.setFill()
