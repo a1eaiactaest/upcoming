@@ -19,7 +19,8 @@ class MapMenuItemView: NSView {
         self.autoresizingMask = [.width]
         self.wantsLayer = true
         self.layer?.backgroundColor = .clear
-        setupMapView()
+        // Do not add the mapView yet; wait until geocoding succeeds
+        configureMapViewAppearance()
         fetchCoordinates()
     }
 
@@ -27,13 +28,20 @@ class MapMenuItemView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    private func setupMapView() {
+    private func configureMapViewAppearance() {
         mapView.wantsLayer = true
         mapView.layer?.cornerRadius = 10
         mapView.layer?.masksToBounds = true
-        //mapView.layer?.borderWidth = 1
-        //mapView.layer?.borderColor = NSColor.systemBlue.cgColor
 
+        mapView.isZoomEnabled = false
+        mapView.isScrollEnabled = false
+        mapView.isRotateEnabled = false
+        mapView.isPitchEnabled = false
+        mapView.showsZoomControls = false
+        mapView.showsCompass = true
+    }
+
+    private func layoutMapViewToPaddedBounds() {
         let paddedBounds = NSRect(
             x: bounds.origin.x + padding,
             y: bounds.origin.y + padding,
@@ -42,26 +50,13 @@ class MapMenuItemView: NSView {
         )
         mapView.frame = paddedBounds
         mapView.autoresizingMask = [.width, .height]
-
-        mapView.isZoomEnabled = false
-        mapView.isScrollEnabled = false
-        mapView.isRotateEnabled = false
-        mapView.isPitchEnabled = false
-        mapView.showsZoomControls = false
-        mapView.showsCompass = true
-
-        addSubview(mapView)
     }
 
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
-        let paddedBounds = NSRect(
-            x: bounds.origin.x + padding,
-            y: bounds.origin.y + padding,
-            width: bounds.width - (padding * 2),
-            height: bounds.height - (padding * 2)
-        )
-        mapView.frame = paddedBounds
+        if mapView.superview === self {
+            layoutMapViewToPaddedBounds()
+        }
     }
 
     override func viewDidMoveToSuperview() {
@@ -79,13 +74,13 @@ class MapMenuItemView: NSView {
 
                 if let error = error {
                     print("Geocoding error: \(error.localizedDescription)")
-                    self.showErrorView()
+                    self.removeHostingMenuItem()
                     return
                 }
 
                 guard let placemark = placemarks?.first,
                       let location = placemark.location else {
-                    self.showErrorView()
+                    self.removeHostingMenuItem()
                     return
                 }
 
@@ -97,6 +92,13 @@ class MapMenuItemView: NSView {
     private func updateMap(with coordinate: CLLocationCoordinate2D) {
         self.coordinate = coordinate
 
+        // Only now add the map view
+        if mapView.superview == nil {
+            addSubview(mapView)
+            layoutMapViewToPaddedBounds()
+        }
+
+        mapView.removeAnnotations(mapView.annotations)
         let annotation = MKPointAnnotation()
         annotation.coordinate = coordinate
         annotation.title = location
@@ -112,10 +114,21 @@ class MapMenuItemView: NSView {
         mapView.setRegion(region, animated: false)
     }
 
-    private func showErrorView() {
-        let errorLabel = NSTextField(labelWithString: "Map unavailable")
-        errorLabel.frame = bounds
-        errorLabel.alignment = .center
-        addSubview(errorLabel)
+    private func removeHostingMenuItem() {
+        // Find the NSMenuItem that hosts this view and remove it from the menu
+        var responder: NSResponder? = self
+        while let r = responder {
+            if let menuItem = r as? NSMenuItem, let menu = menuItem.menu {
+                // Remove the item; this hides the box entirely
+                menu.removeItem(menuItem)
+                return
+            }
+            responder = r.nextResponder
+        }
+
+        // Fallback: if we can’t find the menu item, just hide ourselves
+        isHidden = true
+        frame.size.height = 0
+        needsLayout = true
     }
 }
